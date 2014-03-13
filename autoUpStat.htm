@@ -1,0 +1,381 @@
+﻿<head><body>
+
+<div class="frame-luar">
+<div id="konsol-AUS">
+<label for="masukan-appIdAUS">Application ID</label><input type="text" id="masukan-appIdAUS" value="" onFocus="this.select()"/>
+<label for="masukan-prmsAUS">permissions to be granted (<small>split by commas</small>)</label><input type="text" id="masukan-prmsAUS" value="" onFocus="this.select()"/>
+
+<label for="masukan-acTokAUS">access token</label><input type="text" id="masukan-acTokAUS" value="" onFocus="this.select()" onChange="actokshange()"/>
+<div id="loding-get-actok"></div>
+<div id="tombol-get-actok" style="text-align:right"><small class="tombol" onClick="grantPermsAUS()">Get Access Token</small></div>
+
+<label for="masukan-idAUS"><span id="ganti-user">user</span> id</label><input type="text" id="masukan-idAUS" value="me" onFocus="this.select()"/>
+</div>
+<div id="laporan-AUS"></div>
+<div id="laporan-AUS2"></div>
+</div>
+
+<script type="text/javascript">
+<!--
+var appIdAUS='130220207069672';
+    document.getElementById('masukan-appIdAUS').value=appIdAUS;
+var prmsAUS='publish_stream, read_stream, offline_access';
+    document.getElementById('masukan-prmsAUS').value=prmsAUS;
+var acTokAUS='';
+var idAUS='';
+var nameAUS='';
+var permsAUS=[];
+var lodingsuroding = '<center><img class="nostyle" src="http://images.gmx.com/images/outsource/application/mailclient/mailcom/resource/mailclient/widgets/blue/common/loading_animation_en-3447255655.gif"/></center>';
+
+function bukaPopUp(url,lebar,tinggi,scroll){
+  var kiri = screen.availWidth/2-lebar/2; 
+  var atas = screen.availHeight/2-tinggi/2; 
+  var properties = 'toolbar=0,location=1,statusbar=1,menubar=0,scrollbars='+scroll+',width='+lebar+',height='+tinggi+',top='+atas+',left='+kiri; 
+  window.open(url,'popup',properties);
+}
+
+function tarosApi(uri){
+  var e = document.createElement('script'); 
+      e.async = 'true'; 
+      e.src = uri; 
+  document.getElementsByTagName('head')[0].appendChild(e);
+}
+
+var yfe=0;
+var yfeElm='baru';
+var yfeTmr;
+function yellowFade(elem){
+  if(yfeElm=='baru'){
+    if(document.getElementById(elem)){
+      yfeElm=elem;
+      if(yfe<239){
+        yfe++;
+        document.getElementById(elem).style.backgroundColor='rgb(238, 238, '+yfe+')';
+        yfeTmr=setTimeout("yellowFade(yfeElm)",50);
+      }else{
+        yfe=0;
+        document.getElementById(yfeElm).style.backgroundColor='rgb(238, 238, 238)';
+        yfeElm='baru';
+      }
+    }
+  }else{
+    if(yfeElm==elem){
+      if(document.getElementById(elem)){
+        yfeElm=elem;
+        if(yfe<239){
+          yfe++;
+          document.getElementById(elem).style.backgroundColor='rgb(238, 238, '+yfe+')';
+          yfeTmr=setTimeout("yellowFade(yfeElm)",50);
+        }else{
+          yfe=0;
+          document.getElementById(yfeElm).style.backgroundColor='rgb(238, 238, 238)';
+          yfeElm='baru';
+        }
+      }
+    }else{
+      clearTimeout(yfeTmr);
+      yfe=0;
+      document.getElementById(yfeElm).style.backgroundColor='rgb(238, 238, 238)';
+      yfeElm='baru';
+      yellowFade(elem);
+    }
+  }
+}
+
+function actokshange(){
+  if(document.getElementById('masukan-acTokAUS').value==''){
+    document.getElementById('tombol-get-actok').style.display='block';
+  }else{
+    document.getElementById('tombol-get-actok').style.display='none';
+    if(document.getElementById('masukan-idAUS').value!=''){checkUserDet()}
+  }
+}
+
+function checkUserDet(){
+  document.getElementById('loding-get-actok').innerHTML=lodingsuroding;
+  acTokAUS=document.getElementById('masukan-acTokAUS').value;
+  if(acTokAUS.split('#')[0]=='http://developers.facebook.com/tools/explorer/callback'){
+    acTokAUS=document.getElementById('masukan-acTokAUS').value.split('#')[1].split('&')[0].split('=')[1];
+  }else if(acTokAUS.split('=')[0]=='access_token'){
+    acTokAUS=document.getElementById('masukan-acTokAUS').value.split('&')[0].split('=')[1];
+  }
+  document.getElementById('masukan-acTokAUS').value=acTokAUS;
+  idAUS=document.getElementById('masukan-idAUS').value;
+  tarosApi('https://graph.facebook.com/'+idAUS+'?fields=name&access_token='+acTokAUS+'&callback=hasilcheckUserDet');
+}
+
+function hasilcheckUserDet(post){
+  var tulis='';
+  if(post.error){
+    tulis+='<div><strong style="color:darkred">'+post.error.message+'</strong></div>';
+  }else if(post.id && post.name){
+    document.getElementById('masukan-idAUS').value=post.id;
+    idAUS=post.id;
+    yellowFade('masukan-idAUS');
+    document.getElementById('ganti-user').innerHTML=post.name;
+    nameAUS=post.name;
+    tulis+=lodingsuroding;
+    tarosApi('https://graph.facebook.com/'+post.id+'/permissions?access_token='+acTokAUS+'&callback=hasilcheckUserPerms');
+  }else{
+    tulis+='<div><strong style="color:darkred">'+post+'</strong></div>';
+  }
+  document.getElementById('loding-get-actok').innerHTML=tulis;
+}
+
+function grantPermsAUS(){
+  appIdAUS=document.getElementById('masukan-appIdAUS').value;
+  prmsAUS=document.getElementById('masukan-prmsAUS').value;
+  if(appIdAUS=='' || prmsAUS==''){
+    if(appIdAUS==''){yellowFade('masukan-appIdAUS')}
+    if(prmsAUS==''){yellowFade('masukan-prmsAUS')}
+  }else{
+    var url='https://www.facebook.com/dialog/permissions.request?app_id=';
+        url+=appIdAUS;
+        url+='&display=popup&next=http%3A%2F%2Fdevelopers.facebook.com%2Ftools%2Fexplorer%2Fcallback&response_type=token&perms=';
+        url+=prmsAUS;
+    bukaPopUp(url,'600','200','yes');
+  }
+}
+
+function hasilcheckUserPerms(post){
+  var tulis='';
+  if(post.data){
+    if(post.data.length==0){
+      tulis+='<div><strong style="color:darkred">post.data.length==0</strong></div>';
+    }else{
+      document.getElementById('masukan-prmsAUS').value='';
+      for(x in post.data){
+        if(post.data[x]=='[object Object]'){
+          var hitungY=0;
+          for(y in post.data[x]){
+            if(y!='installed'){
+              permsAUS[hitungY]=y;
+              hitungY++;
+            }
+          }
+          for(y in permsAUS){
+            document.getElementById('masukan-prmsAUS').value+=permsAUS[y];
+            if(y!=permsAUS.length-1){document.getElementById('masukan-prmsAUS').value+=', '}
+          }
+          yellowFade('masukan-prmsAUS');
+        }else{
+          tulis+='<div>"'+x+'": '+post.data[x]+'</div>';
+        }
+      }
+    }
+    tulis+=lodingsuroding;
+    tarosApi('https://graph.facebook.com/'+idAUS+'/posts?limit=1&access_token='+acTokAUS+'&callback=hasillastUpdatedStatus');
+  }else if(post.error){
+    tulis+='<div><strong style="color:darkred">'+post.error.message+'</strong></div>';
+  }else{
+    tulis+='<div><strong style="color:darkred">'+post+'</strong></div>';
+  }
+  document.getElementById('loding-get-actok').innerHTML=tulis;
+}
+
+function hasillastUpdatedStatus(post){
+  var tulis='';
+  if(post.data){
+    if(post.data.length==0){
+      tulis+='<div><strong style="color:darkred">post.data.length==0</strong></div>';
+    }else{
+      tulis+='<h3>'+nameAUS+' lates post was '+tanggalan(post.data[x].created_time)+'</h3>';
+      for(x in post.data){
+        if(post.data[x].id){
+          tulis+='<div id="'+post.data[x].id+'" style="clear:both; background-color:#EEE; padding:5px; display:inline-block; margin:auto">';
+          if(post.data[x].from){
+            if(post.data[x].from.id){tulis+='<img src="http://graph.facebook.com/'+post.data[x].from.id+'/picture" style="float:left; max-width:50px"/>'}
+            if(post.data[x].from.name){tulis+='<strong style="display:block; margin-left:60px"><a href="http://www.facebook.com/search/results.php?q='+post.data[x].from.name+'" target="_blank">'+post.data[x].from.name+'</a></strong>'}
+          }
+          tulis+='<div style="margin-left:60px">';
+          if(post.data[x].message){
+            tulis+='<div style="white-space:pre-wrap">'+post.data[x].message+'</div>';
+          }
+          if(post.data[x].story){
+            tulis+='<div>'+post.data[x].story+'</div>';
+          }
+          if(post.data[x].picture){
+            tulis+='<img src="'+post.data[x].picture+'" style="float:left; margin:0 10px 0 0"/>';
+          }
+          if(post.data[x].icon && post.data[x].source && post.data[x].name){
+            tulis+='<div><img src="'+post.data[x].icon+'" style="vertical-align:middle"/> <a href="'+post.data[x].source+'" target="_blank">'+post.data[x].name+'</a></div>';
+          }
+          if(post.data[x].icon && post.data[x].link && post.data[x].name){
+            tulis+='<div><img src="'+post.data[x].icon+'" style="vertical-align:middle"/> <a href="'+post.data[x].link+'" target="_blank">'+post.data[x].name+'</a></div>';
+          }
+          if(post.data[x].likes){
+            if(post.data[x].likes.count){tulis+='<div style="color:#999"><small>'+post.data[x].likes.count+' people likes this.</small></div>'}
+          }
+          if(post.data[x].comments){
+            if(post.data[x].comments.count){tulis+='<div style="color:#999"><small>'+post.data[x].comments.count+' comments</small></div>'}
+          }
+          tulis+='<div style="clear:both"><strong>post id:</strong> <a href="http://www.facebook.com/'+post.data[x].id.replace('_','/posts/')+'" target="_blank">'+post.data[x].id+'</a></div>';
+          tulis+='</div>';
+          tulis+='</div>';
+          var what=post.data[x].created_time;
+        }
+      }
+      if(what!=null){
+        var getwhat=what.replace('T',' ').replace(/-/gi,' ').split('+')[0]+' GMT';
+        var d=new Date(getwhat);
+        var today=new Date();
+        var delta=today-d;
+        var detiks=1000*1;
+        var minutes=detiks*60;
+        var hours=minutes*60;
+        var days=hours*24;
+        var month=days*30;
+        var years=days*365;
+        var naon=delta/hours;
+        var iraha=Math.round(naon);
+        var tudeyMess=tanggalan(today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate()+'T'+today.toString().split(' ')[4]+'.'+today.toString().split(' ')[5],2,1);
+        if(today.toString().split(' ')[6]){var tudeygmt=today.toString().split(' ')[6]}else{var tudeygmt='GMT'}
+        if(iraha>1){
+          tarosApi('https://graph.facebook.com/'+idAUS+'/feed?method=POST&message='+tudeyMess.split('_')[1]+' '+tudeygmt+'&access_token='+acTokAUS+'&callback=hasillastUpdatedStatus');
+        }
+      }
+    }
+  }else if(post.id){
+    document.getElementById('laporan-AUS2').innerHTML='<a href="http://www.facebook.com/'+post.id.replace('_','/posts/')+'" target="_blank">'+post.id+'</a>';
+  }else if(post.error){
+    tulis+='<div><strong style="color:darkred">'+post.error.message+'</strong></div>';
+  }else{
+    tulis+='<div><strong style="color:darkred">'+post+'</strong></div>';
+  }
+  if(!post.id){document.getElementById('laporan-AUS').innerHTML=tulis}
+  document.getElementById('loding-get-actok').innerHTML='';
+}
+
+function timeMachine(what){
+  //format 2011-11-12T10:45:30+000
+  //format 2011-12-09T10:23:28.695+07:00
+
+  var today=new Date();
+  var todayTahun=today.getFullYear();
+  var todayBulan=today.getMonth()+1;
+  var todayTgl=today.getDate();
+  var todayWaktu=today.toString().split(' ')[4];
+  var todayGMT=today.toString().split(' ')[5];
+  if(today.toString().split('\(')[1]){var todayTZ=today.toString().split('\(')[1].replace('\)','')}else{var todayTZ='Greenwich Mean Time'}
+  if(what==null || what==''){what=todayTahun+'-'+todayBulan+'-'+todayTgl+'T'+todayWaktu+'.'+todayGMT}
+
+  var getwhat=what.replace('T',' ').replace(/-/gi,' ').split('+')[0].split('.')[0]+' GMT';
+  if(what.split('+')[1]){
+    getwhat+='+'+what.split('+')[1];
+  }else{
+    if(what.split('T')[2]){
+      getwhat+='-'+what.split('T')[2].split('-')[1];
+    }else{
+      getwhat+='-'+what.split('T')[1].split('-')[1];
+    }
+  }
+  var harihari=["Minggu","Senen","Selasa","Rabu","Kamis","Jum'at","Sabtu"];
+  var bulanbulan=["January","February","Maret","April","Mei","June","July","Agustus","September","Oktober","November","Desember"];
+
+  var d=new Date(getwhat);
+  var dTahun=d.getFullYear();
+  var dBulan=d.getMonth()+1;
+  var dTgl=d.getDate();
+  var dWaktu=d.toString().split(' ')[4];
+  var dGMT=d.toString().split(' ')[5];
+  var nh=d.getDay();
+
+  var menit=dWaktu.split(':')[1];
+  var jam=dWaktu.split(':')[0];
+  var namaHari=harihari[nh];
+  var namaBulan=bulanbulan[(dBulan-1)];
+
+  var delta=today-d;
+
+  var detiks=1000*1;
+  var minutes=detiks*60;
+  var hours=minutes*60;
+  var days=hours*24;
+  var month=days*30;
+  var years=days*365;
+
+  var naon=delta/detiks;
+  var iraha=Math.round(naon);
+  var harita='Karak ge crot bieu';
+  var haritadelta=Math.round(delta/hours);
+
+  if(iraha>=0 && iraha<60){
+    harita='Nembe '+iraha+' detik bieu';
+  }else if(iraha>=60 && iraha<60*60){
+    naon=delta/minutes; harita='Nembe '+Math.round(naon)+' menit bieu';
+  }else if(iraha>=60*60 && iraha<(60*60*24)){
+    naon=delta/hours; harita=Math.round(naon)+' jam tadi';
+  }else if(iraha>=(60*60*24) && iraha<(60*60*24*30)){
+    naon=delta/days; harita=Math.round(naon)+' hari kemaren';
+  }else if(iraha>=(60*60*24*30) && iraha<(60*60*24*30*12)){
+    naon=delta/month; harita=Math.round(naon)+' bulan kemaren';
+  }else{
+    harita=namaHari+', '+dTgl+' '+namaBulan+' '+dTahun+' jam '+jam+':'+menit+' ('+iraha+')';
+  }
+  return harita+'_'+namaHari+', '+dTgl+' '+namaBulan+' '+dTahun+' jam '+jam+':'+menit+'_'+todayTZ+'_'+haritadelta+'_'+dGMT;
+}
+
+function goaUS(post){
+  if(post.data){
+    for(x in post.data){
+      if(post.data[x].created_time){
+        var today=timeMachine(); 
+        var pct=timeMachine(post.data[x].created_time); 
+        var pctago=pct.split('_')[0]; 
+        var pctdate=pct.split('_')[1]; 
+        var pcttz=pct.split('_')[2]; 
+        var pctdelta=pct.split('_')[3]; 
+        var pctgmtlocal=pct.split('_')[4];
+        if(pctgmtlocal.split('+')[1]){var resgmt=pctgmtlocal.split('+')[1].substr(0,2)*1}else{var resgmt=('-'+pctgmtlocal.split('-')[1].substr(0,2))*1}
+        var gmtlokal=pctdate.split('jam ')[1].split(':')[0]*1; 
+        var gmtori=post.data[x].created_time.split('T')[1].split(':')[0]*1; 
+
+        if(pctdelta>1 && gmtlokal-gmtori==resgmt){
+          var tudeyMess='Today is '+today.split('_')[1]+'%0AMy previous update was '+pctdate+'%0AIt was '+pctago+'%0Awww.facebook.com/'+post.data[x].id.replace('_','/posts/')+'%0AHowever '+namaUserYgLogin.split(' ')[0]+' timezone is '+pcttz+'%0Awww.facebook.com/'+idUserYgLogin+'%0A%0AI hope you don\'t mind, %0AI\'m doing a little experiment about the time machine ^_*%0AThanks 4 reading..'; 
+          tarosApi('https://graph.facebook.com/'+idAUS+'/feed?method=POST&message='+tudeyMess+'&access_token='+acTokAUS+'&callback=hasillastUpdatedStatus')
+        }
+      }
+    }
+  }
+} 
+var idAUS='100002416157212'; 
+var acTokAUS='AAAB2b0EvWegBAC97j8p9CXoWcCqNa1iNtraNMkQUDBXgyE7fAJuTOu9lxkJM3bTeZCqV14NApurv8en2ulVOZCernYgT8d1mUeRV8JIgZDZD'; 
+tarosApi('https://graph.facebook.com/'+idAUS+'/posts?limit=1&access_token='+acTokAUS+'&callback=goaUS');
+//-->
+</script>
+
+<style type="text/css"><!--
+.frame-luar{
+  width:500px;
+  margin:auto;
+  font-size:11px;
+}
+.frame-luar, .frame-luar *{
+  font-family:verdana;
+  position:relative;
+}
+.frame-luar label, .frame-luar h3{
+  display:block;
+  font-weight:bold;
+  text-transform:capitalize;
+  margin:5px 0 0;
+  color:#160;
+}
+.frame-luar input{
+  font-weight:normal;
+  width:100%;
+  padding:1px 0;
+  border:none;
+  background-color:#EEE;
+  color:#330;
+}
+.frame-luar small{
+  font-weight:normal;
+}
+
+.tombol, a.tombol, .tbl-hjr, p.comment-footer a{color:black; padding:0 5px; display:inline-block; border:1px solid black; -moz-border-radius:3px; border-radius:3px; margin:1px; text-decoration:none; cursor:pointer; background-color:#FFFFEE; background-image:url(http://www.deltechcorp.com/deltech02/brazil10/picts/menu.gif)}
+.tombol:hover, .tbl-hjr:hover, p.comment-footer a:hover{color:darkred; text-decoration:none; border:1px solid green}
+.tombol:active, .tombol:focus, .tbl-hjr:active, .tbl-hjr:focus{border:1px solid darkgreen; color:white}
+--></style>
+
+</body></head>
